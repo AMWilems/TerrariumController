@@ -1,3 +1,49 @@
+# === Arduino IDE build garbage ===
+/build/
+/.cache/
+*.ino.bin
+*.ino.hex
+*.ino.elf
+*.ino.with_bootloader.*
+
+# Arduino IDE 2.x folders
+/.arduino15/
+/.arduino_preprocessing/
+/.arduino_output/
+
+# VS Code / PlatformIO (future-proof)
+/.vscode/
+/.pio/
+
+# OS garbage
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === NEVER commit secrets ===
+secrets.h
+config.h
+wifi_credentials.h
+credentials.h
+local_*.h
+*apikey*
+*password*
+*key*
+*.key
+
+# === Optional: ignore downloaded libraries ===
+/libraries/
+/lib/
+
+# === But keep your actual source files ===
+!*.ino
+!*.h
+!*.cpp
+!*.c
+!README.md
+!LICENSE
+!.gitignore
+
 # Prerequisites
 *.d
 
