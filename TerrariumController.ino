@@ -1,43 +1,69 @@
+#include <Arduino.h>
 #include <DHT.h>
-#include <Servo.h>
+#include <WiFi.h>
+#include "secrets.h"
+#include "HatchController.h"
+#include "StatusDisplay.h"
+#include "ThingSpeakClient.h"
 
-#define DHTPIN 2       // whatever digital pin you connected data to
-#define DHTTYPE DHT11  // or DHT22 if you have that
+#define DHTPIN  2
+#define DHTTYPE DHT11
 
-int pos = 0;
 DHT dht(DHTPIN, DHTTYPE);
-Servo myservo;
+
+StatusDisplay   display;
+HatchController hatch;
+
+unsigned long lastThingSpeakUpdate = 0;
+const unsigned long UPDATE_INTERVAL = 180000UL;  // 3 min
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+
+  display.begin();               // ← starts breathing circle immediately
   dht.begin();
-  Serial.println("DHT11 test running!");
-  myservo.attach(9);
+  hatch.begin(9);                // servo on pin 9
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) delay(500);
+  display.showWiFiConnected();
+  delay(1500);
 }
 
 void loop() {
-  delay(2000);  // DHT11 needs at least 2 sec between reads
-
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();  // Celsius
-
-  if (isnan(h) || isnan(t)) {
-    Serial.println("Failed to read from DHT sensor!");
+  display.updateStartupAnimation();
+  if (!display.isStartupComplete()) {
+    delay(10);
     return;
   }
 
-  if (t >= 29.5 || h >= 82) {  // safety buffer
-    myservo.write(90);         // open the hatch
+  // === READ SENSOR (every 2 seconds) ===
+  static unsigned long lastRead = 0;
+  if (millis() - lastRead >= 2000) {
+    lastRead = millis();
+
+    float hum = dht.readHumidity();
+    float temp = dht.readTemperature();
+
+    if (isnan(hum) || isnan(temp)) {
+      Serial.println(F("DHT sensor failed!"));
+      display.showSensorError();
+      return;
+    }
+
+    // Show leaf + hatch status
+    display.update(temp, hum, hatch.isOpen());
+
+    // Control the hatch
+    hatch.update(temp, hum);
+
+    // === UPLOAD TO THINGSPEAK (every 3 minutes) ===
+    static unsigned long lastUpload = 0;
+    if (millis() - lastUpload >= 180000UL) {  // 3 minutes
+      bool ok = sendToThingSpeak(temp, hum, hatch.isOpen());
+      lastUpload = millis();
+    }
   }
 
-  if (t <= 26 && h <= 70) {  // everything cooled/dried enough
-    myservo.write(0);
-  }
-  
-Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print("%\tTemperature: ");
-  Serial.print(t);
-  Serial.println("°C");
-  delay(2000);
+  delay(10);
 }
