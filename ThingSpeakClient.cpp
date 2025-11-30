@@ -1,8 +1,6 @@
 // ThingSpeakClient.cpp
 #include "ThingSpeakClient.h"
 #include "secrets.h"
-
-// THESE ARE REQUIRED FOR Serial, WiFi, millis(), etc. in a .cpp file
 #include <Arduino.h>
 #include <WiFi.h>
 
@@ -74,4 +72,50 @@ bool sendToThingSpeak(float temp, float hum, bool hatchOpen) {
   Serial.println(success ? F(" → SUCCESS") : F(" → FAILED (bad response)"));
   client.stop();
   return success;
+}
+
+bool readTargetValues(float& targetTemp, float& targetHum) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println(F("[ThingSpeak] No WiFi for reading targets"));
+    return false;
+  }
+
+  WiFiClient client;
+  if (!client.connect("api.thingspeak.com", 80)) {
+    Serial.println(F("[ThingSpeak] Failed to connect for target read"));
+    return false;
+  }
+
+  // GET the last entry
+  client.print(String("GET /channels/") + CHANNEL_ID +
+               "/feeds/last?api_key=" + READ_API_KEY + " HTTP/1.1\r\n" +
+               "Host: api.thingspeak.com\r\n" +
+               "Connection: close\r\n\r\n");
+
+  unsigned long timeout = millis() + 5000;
+  while (!client.available() && millis() < timeout) delay(10);
+
+  if (!client.available()) {
+    client.stop();
+    return false;
+  }
+
+  // Parse JSON response (simple way — look for field4 and field5)
+  String response = client.readString();
+  client.stop();
+
+  int tempPos = response.indexOf("\"field4\":\"");
+  int humPos  = response.indexOf("\"field5\":\"");
+
+  if (tempPos != -1 && humPos != -1) {
+    tempPos += 10;
+    humPos  += 10;
+    targetTemp = response.substring(tempPos, response.indexOf('"', tempPos)).toFloat();
+    targetHum  = response.substring(humPos,  response.indexOf('"', humPos)).toFloat();
+
+    if (targetTemp >= 15 && targetTemp <= 35 && targetHum >= 50 && targetHum <= 95) {
+      return true;
+    }
+  }
+  return false;
 }

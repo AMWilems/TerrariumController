@@ -45,11 +45,11 @@ void StatusDisplay::showSensorError() {
   matrix.loadFrame(err);
 }
 
-void StatusDisplay::update(float temp, float hum, bool hatchOpen) {
+void StatusDisplay::update() {
   updateStartupAnimation();
   if (!startupPlayed) return;
 
-  uint32_t frame[3] = {0, 0, 0};   // ← declared once, in scope for the whole function
+  uint32_t frame[3] = {0, 0, 0};
 
-  matrix.loadFrame(frame);   // now it works!
+  matrix.loadFrame(frame);
 }

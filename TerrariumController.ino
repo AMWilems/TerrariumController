@@ -5,25 +5,27 @@
 #include "HatchController.h"
 #include "StatusDisplay.h"
 #include "ThingSpeakClient.h"
+#include <ThingSpeak.h>
 
-#define DHTPIN  2
+#define DHTPIN 2
 #define DHTTYPE DHT11
 
 DHT dht(DHTPIN, DHTTYPE);
 
-StatusDisplay   display;
+StatusDisplay display;
 HatchController hatch;
 
 unsigned long lastThingSpeakUpdate = 0;
+float targetTemp = 28.0;
+float targetHum  = 85.0;
+
 const unsigned long UPDATE_INTERVAL = 180000UL;  // 3 min
 
 void setup() {
   Serial.begin(115200);
-
-  display.begin();               // ← starts breathing circle immediately
+  display.begin();
   dht.begin();
-  hatch.begin(9);                // servo on pin 9
-
+  hatch.begin(9);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) delay(500);
   display.showWiFiConnected();
@@ -37,7 +39,7 @@ void loop() {
     return;
   }
 
-  // === READ SENSOR (every 2 seconds) ===
+  //READ SENSOR (every 2 seconds)
   static unsigned long lastRead = 0;
   if (millis() - lastRead >= 2000) {
     lastRead = millis();
@@ -50,14 +52,27 @@ void loop() {
       display.showSensorError();
       return;
     }
+  //POLL FOR NEW TARGET PARAMS (every 5 minutes)
+    static unsigned long lastTargetPoll = 0;
+    if (millis() - lastTargetPoll >= 300000UL) {
+      float newTemp, newHum;
+      if (readTargetValues(newTemp, newHum)) {
+        targetTemp = newTemp;
+        targetHum = newHum;
+        Serial.print(F("[ThingSpeak] Targets updated → Temp: "));
+        Serial.print(targetTemp, 1);
+        Serial.print(F("°C  Hum: "));
+        Serial.print(targetHum, 0);
+        Serial.println(F("%"));
+      } else {
+        Serial.println(F("[ThingSpeak] No new targets (or error)"));
+      }
+      lastTargetPoll = millis();
+    }
 
-    // Show leaf + hatch status
-    display.update(temp, hum, hatch.isOpen());
-
-    // Control the hatch
     hatch.update(temp, hum);
-
-    // === UPLOAD TO THINGSPEAK (every 3 minutes) ===
+  display.update();
+    //UPLOAD TO THINGSPEAK (every 3 minutes)
     static unsigned long lastUpload = 0;
     if (millis() - lastUpload >= 180000UL) {  // 3 minutes
       bool ok = sendToThingSpeak(temp, hum, hatch.isOpen());

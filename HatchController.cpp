@@ -3,7 +3,7 @@
 
 void HatchController::begin(uint8_t servoPin) {
   myservo.attach(servoPin);
-  myservo.write(0);                   // start closed
+  myservo.write(0);
 }
 
 void HatchController::update(float t, float h) {
@@ -14,10 +14,7 @@ void HatchController::update(float t, float h) {
     hatchPos = OPEN;
     hatchMoveStart = now;
     Serial.println("Hatch OPENING");
-  }
-  else if (hatchPos == OPEN && 
-           (t <= 26 && h <= 70) && 
-           (now - hatchMoveStart >= MIN_OPEN_TIME)) {
+  } else if (hatchPos == OPEN && (t <= 26 && h <= 70) && (now - hatchMoveStart >= MIN_OPEN_TIME)) {
     myservo.write(0);
     hatchPos = CLOSED;
     hatchMoveStart = now;
