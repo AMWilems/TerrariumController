@@ -100,7 +100,6 @@ bool readTargetValues(float& targetTemp, float& targetHum) {
     return false;
   }
 
-  // Parse JSON response (simple way — look for field4 and field5)
   String response = client.readString();
   client.stop();
 

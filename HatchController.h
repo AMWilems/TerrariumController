@@ -4,7 +4,7 @@
 class HatchController {
 public:
   void begin(uint8_t servoPin);
-  void update(float temp, float humidity);
+  void update(float t, float h, float targetTemp, float targetHum);
   bool isOpen() const { return hatchPos == OPEN; }
 
 private:

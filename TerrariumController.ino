@@ -17,7 +17,7 @@ HatchController hatch;
 
 unsigned long lastThingSpeakUpdate = 0;
 float targetTemp = 28.0;
-float targetHum  = 85.0;
+float targetHum = 85.0;
 
 const unsigned long UPDATE_INTERVAL = 180000UL;  // 3 min
 
@@ -52,7 +52,7 @@ void loop() {
       display.showSensorError();
       return;
     }
-  //POLL FOR NEW TARGET PARAMS (every 5 minutes)
+    //POLL FOR NEW TARGET PARAMS (every 5 minutes)
     static unsigned long lastTargetPoll = 0;
     if (millis() - lastTargetPoll >= 300000UL) {
       float newTemp, newHum;
@@ -70,8 +70,8 @@ void loop() {
       lastTargetPoll = millis();
     }
 
-    hatch.update(temp, hum);
-  display.update();
+    hatch.update(temp, hum, targetTemp, targetHum);
+    display.update();
     //UPLOAD TO THINGSPEAK (every 3 minutes)
     static unsigned long lastUpload = 0;
     if (millis() - lastUpload >= 180000UL) {  // 3 minutes
